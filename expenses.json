@@ -1,0 +1,415 @@
+[
+  {
+    "date": "2025-07-06",
+    "amount": 146.53,
+    "category": "Food",
+    "description": "Street food",
+    "timestamp": "2025-07-06T19:44:38.427031"
+  },
+  {
+    "date": "2025-07-04",
+    "amount": 81.41,
+    "category": "Transportation",
+    "description": "Metro card recharge",
+    "timestamp": "2025-07-05T01:49:18.427031"
+  },
+  {
+    "date": "2025-07-04",
+    "amount": 323.11,
+    "category": "Food",
+    "description": "Grocery shopping",
+    "timestamp": "2025-07-04T23:40:33.427031"
+  },
+  {
+    "date": "2025-07-04",
+    "amount": 502.28,
+    "category": "Healthcare",
+    "description": "Medicine",
+    "timestamp": "2025-07-05T03:42:02.427031"
+  },
+  {
+    "date": "2025-07-04",
+    "amount": 433.62,
+    "category": "Education",
+    "description": "Workshop",
+    "timestamp": "2025-07-05T04:14:08.427031"
+  },
+  {
+    "date": "2025-07-03",
+    "amount": 564.05,
+    "category": "Entertainment",
+    "description": "Sports event",
+    "timestamp": "2025-07-03T18:43:48.427031"
+  },
+  {
+    "date": "2025-07-03",
+    "amount": 745.7,
+    "category": "Healthcare",
+    "description": "Health checkup",
+    "timestamp": "2025-07-04T07:04:01.427031"
+  },
+  {
+    "date": "2025-07-03",
+    "amount": 1846.03,
+    "category": "Shopping",
+    "description": "Gadgets",
+    "timestamp": "2025-07-04T05:03:09.427031"
+  },
+  {
+    "date": "2025-07-02",
+    "amount": 1791.28,
+    "category": "Shopping",
+    "description": "Clothes",
+    "timestamp": "2025-07-03T00:27:47.427031"
+  },
+  {
+    "date": "2025-07-01",
+    "amount": 217.16,
+    "category": "Education",
+    "description": "Online subscription",
+    "timestamp": "2025-07-01T19:43:03.427031"
+  },
+  {
+    "date": "2025-07-01",
+    "amount": 277.34,
+    "category": "Food",
+    "description": "Coffee",
+    "timestamp": "2025-07-01T22:33:22.427031"
+  },
+  {
+    "date": "2025-06-29",
+    "amount": 1673.14,
+    "category": "Bills",
+    "description": "Phone bill",
+    "timestamp": "2025-06-30T07:24:24.427031"
+  },
+  {
+    "date": "2025-06-29",
+    "amount": 43.58,
+    "category": "Transportation",
+    "description": "Taxi ride",
+    "timestamp": "2025-06-30T05:17:24.427031"
+  },
+  {
+    "date": "2025-06-27",
+    "amount": 665.21,
+    "category": "Education",
+    "description": "Course fee",
+    "timestamp": "2025-06-28T04:48:39.427031"
+  },
+  {
+    "date": "2025-06-27",
+    "amount": 265.74,
+    "category": "Other",
+    "description": "Donation",
+    "timestamp": "2025-06-28T01:17:12.427031"
+  },
+  {
+    "date": "2025-06-27",
+    "amount": 293.13,
+    "category": "Education",
+    "description": "Certification",
+    "timestamp": "2025-06-27T18:30:54.427031"
+  },
+  {
+    "date": "2025-06-27",
+    "amount": 179.37,
+    "category": "Transportation",
+    "description": "Bus fare",
+    "timestamp": "2025-06-28T06:01:01.427031"
+  },
+  {
+    "date": "2025-06-25",
+    "amount": 177.12,
+    "category": "Transportation",
+    "description": "Fuel",
+    "timestamp": "2025-06-25T22:11:13.427031"
+  },
+  {
+    "date": "2025-06-25",
+    "amount": 944.54,
+    "category": "Shopping",
+    "description": "Electronics",
+    "timestamp": "2025-06-25T17:26:38.427031"
+  },
+  {
+    "date": "2025-06-25",
+    "amount": 100.56,
+    "category": "Transportation",
+    "description": "Taxi ride",
+    "timestamp": "2025-06-25T15:26:13.427031"
+  },
+  {
+    "date": "2025-06-24",
+    "amount": 154.4,
+    "category": "Other",
+    "description": "Gift",
+    "timestamp": "2025-06-24T21:46:09.427031"
+  },
+  {
+    "date": "2025-06-24",
+    "amount": 99.78,
+    "category": "Food",
+    "description": "Coffee",
+    "timestamp": "2025-06-25T11:50:06.427031"
+  },
+  {
+    "date": "2025-06-24",
+    "amount": 1121.46,
+    "category": "Healthcare",
+    "description": "Physiotherapy",
+    "timestamp": "2025-06-25T11:14:08.427031"
+  },
+  {
+    "date": "2025-06-23",
+    "amount": 279.09,
+    "category": "Education",
+    "description": "Tuition",
+    "timestamp": "2025-06-24T00:05:59.427031"
+  },
+  {
+    "date": "2025-06-23",
+    "amount": 337.12,
+    "category": "Healthcare",
+    "description": "Medicine",
+    "timestamp": "2025-06-23T18:43:18.427031"
+  },
+  {
+    "date": "2025-06-23",
+    "amount": 829.32,
+    "category": "Healthcare",
+    "description": "Medicine",
+    "timestamp": "2025-06-23T19:37:26.427031"
+  },
+  {
+    "date": "2025-06-22",
+    "amount": 235.5,
+    "category": "Other",
+    "description": "Gift",
+    "timestamp": "2025-06-22T21:53:16.427031"
+  },
+  {
+    "date": "2025-06-22",
+    "amount": 482.86,
+    "category": "Healthcare",
+    "description": "Medicine",
+    "timestamp": "2025-06-23T00:51:46.427031"
+  },
+  {
+    "date": "2025-06-22",
+    "amount": 94.84,
+    "category": "Other",
+    "description": "Emergency",
+    "timestamp": "2025-06-23T11:18:21.427031"
+  },
+  {
+    "date": "2025-06-22",
+    "amount": 560.6,
+    "category": "Entertainment",
+    "description": "Concert",
+    "timestamp": "2025-06-23T02:18:07.427031"
+  },
+  {
+    "date": "2025-06-20",
+    "amount": 399.57,
+    "category": "Shopping",
+    "description": "Gadgets",
+    "timestamp": "2025-06-21T04:08:16.427031"
+  },
+  {
+    "date": "2025-06-19",
+    "amount": 22.14,
+    "category": "Transportation",
+    "description": "Auto rickshaw",
+    "timestamp": "2025-06-20T01:26:50.427031"
+  },
+  {
+    "date": "2025-06-19",
+    "amount": 262.0,
+    "category": "Other",
+    "description": "Miscellaneous",
+    "timestamp": "2025-06-19T22:38:28.427031"
+  },
+  {
+    "date": "2025-06-19",
+    "amount": 303.03,
+    "category": "Food",
+    "description": "Coffee",
+    "timestamp": "2025-06-19T15:01:49.427031"
+  },
+  {
+    "date": "2025-06-18",
+    "amount": 214.96,
+    "category": "Other",
+    "description": "Travel",
+    "timestamp": "2025-06-19T10:25:44.427031"
+  },
+  {
+    "date": "2025-06-18",
+    "amount": 55.41,
+    "category": "Transportation",
+    "description": "Bus fare",
+    "timestamp": "2025-06-19T03:53:18.427031"
+  },
+  {
+    "date": "2025-06-18",
+    "amount": 392.22,
+    "category": "Entertainment",
+    "description": "Gaming",
+    "timestamp": "2025-06-19T00:48:15.427031"
+  },
+  {
+    "date": "2025-06-17",
+    "amount": 2513.15,
+    "category": "Bills",
+    "description": "Internet bill",
+    "timestamp": "2025-06-17T19:25:53.427031"
+  },
+  {
+    "date": "2025-06-16",
+    "amount": 1342.63,
+    "category": "Healthcare",
+    "description": "Physiotherapy",
+    "timestamp": "2025-06-16T18:31:42.427031"
+  },
+  {
+    "date": "2025-06-15",
+    "amount": 56.6,
+    "category": "Transportation",
+    "description": "Metro card recharge",
+    "timestamp": "2025-06-15T14:56:27.427031"
+  },
+  {
+    "date": "2025-06-15",
+    "amount": 797.81,
+    "category": "Bills",
+    "description": "Rent",
+    "timestamp": "2025-06-15T15:36:05.427031"
+  },
+  {
+    "date": "2025-06-14",
+    "amount": 424.84,
+    "category": "Healthcare",
+    "description": "Doctor visit",
+    "timestamp": "2025-06-15T04:37:37.427031"
+  },
+  {
+    "date": "2025-06-14",
+    "amount": 142.74,
+    "category": "Other",
+    "description": "Travel",
+    "timestamp": "2025-06-14T18:30:41.427031"
+  },
+  {
+    "date": "2025-06-14",
+    "amount": 72.03,
+    "category": "Other",
+    "description": "Emergency",
+    "timestamp": "2025-06-14T19:51:30.427031"
+  },
+  {
+    "date": "2025-06-14",
+    "amount": 609.22,
+    "category": "Entertainment",
+    "description": "Sports event",
+    "timestamp": "2025-06-15T08:00:20.427031"
+  },
+  {
+    "date": "2025-06-13",
+    "amount": 533.87,
+    "category": "Education",
+    "description": "Certification",
+    "timestamp": "2025-06-14T05:37:54.427031"
+  },
+  {
+    "date": "2025-06-12",
+    "amount": 114.54,
+    "category": "Other",
+    "description": "Emergency",
+    "timestamp": "2025-06-12T16:37:48.427031"
+  },
+  {
+    "date": "2025-06-11",
+    "amount": 1761.25,
+    "category": "Bills",
+    "description": "Electricity bill",
+    "timestamp": "2025-06-12T04:25:24.427031"
+  },
+  {
+    "date": "2025-06-11",
+    "amount": 535.38,
+    "category": "Education",
+    "description": "Books",
+    "timestamp": "2025-06-12T01:51:23.427031"
+  },
+  {
+    "date": "2025-06-11",
+    "amount": 594.56,
+    "category": "Entertainment",
+    "description": "Sports event",
+    "timestamp": "2025-06-11T20:05:05.427031"
+  },
+  {
+    "date": "2025-06-11",
+    "amount": 1027.63,
+    "category": "Healthcare",
+    "description": "Eye test",
+    "timestamp": "2025-06-12T09:03:13.427031"
+  },
+  {
+    "date": "2025-06-10",
+    "amount": 259.46,
+    "category": "Food",
+    "description": "Street food",
+    "timestamp": "2025-06-11T10:54:28.427031"
+  },
+  {
+    "date": "2025-06-09",
+    "amount": 164.88,
+    "category": "Transportation",
+    "description": "Parking fee",
+    "timestamp": "2025-06-10T09:20:28.427031"
+  },
+  {
+    "date": "2025-06-09",
+    "amount": 110.93,
+    "category": "Healthcare",
+    "description": "Medicine",
+    "timestamp": "2025-06-10T10:19:23.427031"
+  },
+  {
+    "date": "2025-06-09",
+    "amount": 1639.95,
+    "category": "Bills",
+    "description": "Water bill",
+    "timestamp": "2025-06-09T15:36:42.427031"
+  },
+  {
+    "date": "2025-06-09",
+    "amount": 1199.02,
+    "category": "Healthcare",
+    "description": "Eye test",
+    "timestamp": "2025-06-09T18:41:02.427031"
+  },
+  {
+    "date": "2025-07-05",
+    "amount": 100.0,
+    "category": "Entertainment",
+    "description": "movie",
+    "timestamp": "2025-07-06T17:16:25.722835"
+  },
+  {
+    "date": "2025-07-11",
+    "amount": 100.0,
+    "category": "Education",
+    "description": "Sumesh",
+    "timestamp": "2025-07-06T17:21:39.773050"
+  },
+  {
+    "date": "2025-07-06",
+    "amount": 100000.0,
+    "category": "Healthcare",
+    "description": "nbsdhbxj",
+    "timestamp": "2025-07-06T20:33:07.772705"
+  }
+]
