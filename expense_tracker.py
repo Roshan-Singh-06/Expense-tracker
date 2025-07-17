@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter import font
@@ -21,6 +20,16 @@ try:
     NOTIFICATIONS_AVAILABLE = True
 except ImportError:
     NOTIFICATIONS_AVAILABLE = False
+
+# Import AI modules
+try:
+    from ai_categorizer import AIExpenseCategorizer
+    from financial_ai import FinancialAI
+    from real_time_dashboard import RealTimeDashboard
+    AI_FEATURES_AVAILABLE = True
+except ImportError as e:
+    print(f"AI features not available: {e}")
+    AI_FEATURES_AVAILABLE = False
 
 # Set modern styling for matplotlib
 plt.style.use('seaborn-v0_8-darkgrid')
@@ -58,6 +67,16 @@ class ExpenseTracker:
         
         # Initialize data
         self.expenses = self.load_data()
+        
+        # Initialize AI components
+        self.ai_categorizer = None
+        self.financial_ai = None
+        self.dashboard = None
+        
+        if AI_FEATURES_AVAILABLE:
+            self.ai_categorizer = AIExpenseCategorizer()
+            self.financial_ai = FinancialAI()
+            self.dashboard = RealTimeDashboard(self.root, self.get_expense_data)
         
         # Notification settings
         self.notifications_enabled = True
@@ -148,20 +167,28 @@ class ExpenseTracker:
     def create_widgets(self):
         """Create the main GUI widgets with modern design"""
         # Create main container
-        main_container = tk.Frame(self.root, bg=self.colors['light'])
-        main_container.pack(fill='both', expand=True, padx=20, pady=20)
+        self.main_frame = tk.Frame(self.root, bg=self.colors['light'])
+        self.main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
         # Header section
-        self.create_header(main_container)
+        self.create_header(self.main_frame)
         
         # Create notebook for tabs with modern styling
-        self.notebook = ttk.Notebook(main_container, style='Modern.TNotebook')
+        self.notebook = ttk.Notebook(self.main_frame, style='Modern.TNotebook')
         self.notebook.pack(fill='both', expand=True, pady=(20, 0))
         
         # Create tabs
         self.create_add_expense_tab()
         self.create_view_expenses_tab()
         self.create_analytics_tab()
+        
+        # Add AI features tab if available
+        if AI_FEATURES_AVAILABLE:
+            self.create_ai_features_tab()
+        
+        # AI Suggestions Panel (add after notebook)
+        if AI_FEATURES_AVAILABLE:
+            self.create_ai_suggestions_panel()
         
     def create_header(self, parent):
         """Create modern header section"""
@@ -598,11 +625,11 @@ class ExpenseTracker:
             messagebox.showerror("Error", f"Failed to export data: {str(e)}")
     
     def add_expense(self):
-        """Add a new expense with enhanced validation"""
+        """Add a new expense with enhanced validation and AI categorization"""
         try:
             # Validate inputs
-            if not self.amount_var.get() or not self.category_var.get():
-                messagebox.showerror("❌ Error", "Please fill in amount and category")
+            if not self.amount_var.get():
+                messagebox.showerror("❌ Error", "Please fill in amount")
                 return
             
             amount = float(self.amount_var.get())
@@ -610,8 +637,42 @@ class ExpenseTracker:
                 messagebox.showerror("❌ Error", "Amount must be positive")
                 return
             
-            # Clean category (remove emoji)
+            description = self.description_var.get() or "No description"
+            
+            # Use AI categorization if available and category not manually selected
             category = self.category_var.get()
+            if (not category or category == "Select category") and AI_FEATURES_AVAILABLE and self.ai_categorizer:
+                # Try AI categorization
+                suggested_category = self.ai_categorizer.smart_categorize(description, amount)
+                
+                # Ask user if they want to use the suggestion
+                if suggested_category and suggested_category != "Other":
+                    result = messagebox.askyesno(
+                        "🤖 AI Suggestion", 
+                        f"AI suggests category: '{suggested_category}'\n\nUse this suggestion?",
+                        icon='question'
+                    )
+                    if result:
+                        category = suggested_category
+                        # Train the AI with user's acceptance
+                        self.ai_categorizer.learn_from_feedback(description, amount, suggested_category, True)
+                    else:
+                        # Let user choose manually
+                        category = self.category_var.get()
+                        if not category or category == "Select category":
+                            messagebox.showerror("❌ Error", "Please select a category")
+                            return
+                        # Train the AI with user's rejection and correct choice
+                        self.ai_categorizer.learn_from_feedback(description, amount, category, False)
+                else:
+                    if not category or category == "Select category":
+                        messagebox.showerror("❌ Error", "Please select a category")
+                        return
+            elif not category or category == "Select category":
+                messagebox.showerror("❌ Error", "Please select a category")
+                return
+            
+            # Clean category (remove emoji if present)
             if category.startswith('🍕'):
                 category = "Food"
             elif category.startswith('🚗'):
@@ -634,7 +695,7 @@ class ExpenseTracker:
                 "date": self.date_var.get(),
                 "amount": amount,
                 "category": category,
-                "description": self.description_var.get() or "No description",
+                "description": description,
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -663,6 +724,12 @@ class ExpenseTracker:
             # Show success notification
             self.show_toast_notification("✅ Success", "Expense added successfully!", "success")
             messagebox.showinfo("✅ Success", "Expense added successfully!")
+            
+            # Update AI suggestions after adding expense
+            if AI_FEATURES_AVAILABLE and hasattr(self, 'suggestions_container'):
+                self.root.after(500, self.update_ai_suggestions)
+                # Check for urgent alerts
+                self.root.after(1000, self.check_for_urgent_alerts)
             
         except ValueError:
             messagebox.showerror("❌ Error", "Please enter a valid amount")
@@ -794,6 +861,10 @@ class ExpenseTracker:
         # Update summary
         self.total_label.config(text=f"💰 Total Expenses: ₹{total_amount:,.2f}")
         self.count_label.config(text=f"📊 Transactions: {len(filtered_expenses)}")
+        
+        # Update AI suggestions when data changes
+        if AI_FEATURES_AVAILABLE and hasattr(self, 'suggestions_container'):
+            self.root.after(1000, self.update_ai_suggestions)  # Delay to avoid too frequent updates
     
     def refresh_recent_expenses(self):
         """Refresh the recent expenses view in add tab with enhanced display"""
@@ -1064,7 +1135,7 @@ class ExpenseTracker:
                     verticalalignment='center', 
                     transform=ax.transAxes, 
                     fontsize=12,
-                    bbox=dict(boxstyle="round,pad=0.4", facecolor="#f8f9fa", alpha=0.8))
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="#f9f9f9", alpha=0.8))
 
   
     def start_notification_service(self):
@@ -1445,11 +1516,1006 @@ class ExpenseTracker:
             except:
                 pass  # Use defaults if loading fails
 
-def main():
-    """Main function to run the expense tracker"""
-    root = tk.Tk()
-    app = ExpenseTracker(root)
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
+    def create_ai_features_tab(self):
+        """Create the AI features tab"""
+        ai_frame = ttk.Frame(self.notebook)
+        self.notebook.add(ai_frame, text="🤖 AI Features")
+        
+        # Main container
+        main_container = tk.Frame(ai_frame, bg=self.colors['light'])
+        main_container.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header
+        header_frame = tk.Frame(main_container, bg=self.colors['primary'], height=80)
+        header_frame.pack(fill='x', pady=(0, 20))
+        header_frame.pack_propagate(False)
+        
+        header_label = tk.Label(header_frame,
+                               text="🤖 AI-Powered Financial Intelligence",
+                               font=('Segoe UI', 20, 'bold'),
+                               fg=self.colors['white'],
+                               bg=self.colors['primary'])
+        header_label.pack(expand=True)
+        
+        # Create grid of AI feature cards
+        features_frame = tk.Frame(main_container, bg=self.colors['light'])
+        features_frame.pack(fill='both', expand=True)
+        
+        # Row 1: Dashboard and AI Insights
+        row1_frame = tk.Frame(features_frame, bg=self.colors['light'])
+        row1_frame.pack(fill='x', pady=(0, 20))
+        
+        # Real-time Dashboard Card
+        dashboard_card = self.create_ai_feature_card(
+            row1_frame,
+            "📊 Real-time Dashboard",
+            "Live analytics and interactive visualizations",
+            "Open live dashboard with real-time charts, spending trends, and financial health metrics",
+            self.open_dashboard,
+            self.colors['secondary']
+        )
+        dashboard_card.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        # AI Insights Card
+        insights_card = self.create_ai_feature_card(
+            row1_frame,
+            "🧠 AI Financial Insights",
+            "Smart analysis and recommendations",
+            "Get AI-powered spending analysis, pattern detection, and personalized recommendations",
+            self.show_ai_insights,
+            self.colors['accent']
+        )
+        insights_card.pack(side='left', fill='both', expand=True, padx=(10, 0))
+        
+        # Row 2: Categorization and Predictions
+        row2_frame = tk.Frame(features_frame, bg=self.colors['light'])
+        row2_frame.pack(fill='x', pady=(0, 20))
+        
+        # Smart Categorization Card
+        categorization_card = self.create_ai_feature_card(
+            row2_frame,
+            "🏷️ Smart Categorization",
+            "Automatic expense categorization",
+            "AI learns from your spending habits to automatically categorize new expenses",
+            self.show_categorization_settings,
+            self.colors['success']
+        )
+        categorization_card.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        # Prediction Card
+        prediction_card = self.create_ai_feature_card(
+            row2_frame,
+            "🔮 Spending Predictions",
+            "Future spending forecasts",
+            "Predict future spending patterns and budget requirements using machine learning",
+            self.show_predictions,
+            self.colors['warning']
+        )
+        prediction_card.pack(side='left', fill='both', expand=True, padx=(10, 0))
+        
+        # Row 3: Anomaly Detection and Reports
+        row3_frame = tk.Frame(features_frame, bg=self.colors['light'])
+        row3_frame.pack(fill='x')
+        
+        # Anomaly Detection Card
+        anomaly_card = self.create_ai_feature_card(
+            row3_frame,
+            "⚠️ Anomaly Detection",
+            "Unusual spending alerts",
+            "Detect unusual spending patterns and get alerts for potential budget overruns",
+            self.show_anomalies,
+            self.colors['danger']
+        )
+        anomaly_card.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        # Smart Reports Card
+        reports_card = self.create_ai_feature_card(
+            row3_frame,
+            "📈 Smart Reports",
+            "Intelligent financial reports",
+            "Generate comprehensive financial reports with AI insights and recommendations",
+            self.generate_smart_report,
+            self.colors['info']
+        )
+        reports_card.pack(side='left', fill='both', expand=True, padx=(10, 0))
+    
+    def create_ai_feature_card(self, parent, title, subtitle, description, command, color):
+        """Create a modern AI feature card"""
+        # Main card frame
+        card_frame = tk.Frame(parent, bg=self.colors['white'], relief='raised', bd=2)
+        
+        # Header with color
+        header_frame = tk.Frame(card_frame, bg=color, height=60)
+        header_frame.pack(fill='x')
+        header_frame.pack_propagate(False)
+        
+        # Title and subtitle
+        title_label = tk.Label(header_frame,
+                              text=title,
+                              font=('Segoe UI', 14, 'bold'),
+                              fg=self.colors['white'],
+                              bg=color)
+        title_label.pack(pady=(10, 0))
+        
+        subtitle_label = tk.Label(header_frame,
+                                 text=subtitle,
+                                 font=('Segoe UI', 10),
+                                 fg=self.colors['light'],
+                                 bg=color)
+        subtitle_label.pack()
+        
+        # Content area
+        content_frame = tk.Frame(card_frame, bg=self.colors['white'])
+        content_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Description
+        desc_label = tk.Label(content_frame,
+                             text=description,
+                             font=('Segoe UI', 11),
+                             fg=self.colors['dark'],
+                             bg=self.colors['white'],
+                             wraplength=250,
+                             justify='left')
+        desc_label.pack(pady=(0, 15))
+        
+        # Action button
+        action_btn = tk.Button(content_frame,
+                              text="Launch Feature",
+                              command=command,
+                              bg=color,
+                              fg=self.colors['white'],
+                              font=('Segoe UI', 11, 'bold'),
+                              relief='flat',
+                              cursor='hand2',
+                              padx=20,
+                              pady=8)
+        action_btn.pack()
+        
+        return card_frame
+    
+    def get_expense_data(self):
+        """Get expense data for AI analysis and dashboard"""
+        return self.expenses.copy()
+    
+    def open_dashboard(self):
+        """Open the real-time dashboard"""
+        if self.dashboard:
+            self.dashboard.open_dashboard()
+        else:
+            messagebox.showinfo("Info", "Real-time dashboard not available. Please install required dependencies.")
+    
+    def show_ai_insights(self):
+        """Show AI financial insights"""
+        if not self.financial_ai:
+            messagebox.showinfo("Info", "AI insights not available. Please install required dependencies.")
+            return
+        
+        if not self.expenses:
+            messagebox.showinfo("Info", "No expense data available for analysis.")
+            return
+        
+        # Create insights window
+        insights_window = tk.Toplevel(self.root)
+        insights_window.title("🧠 AI Financial Insights")
+        insights_window.geometry("800x600")
+        insights_window.configure(bg=self.colors['light'])
+        
+        # Header
+        header_frame = tk.Frame(insights_window, bg=self.colors['accent'], height=60)
+        header_frame.pack(fill='x')
+        header_frame.pack_propagate(False)
+        
+        header_label = tk.Label(header_frame,
+                               text="🧠 AI Financial Insights",
+                               font=('Segoe UI', 18, 'bold'),
+                               fg=self.colors['white'],
+                               bg=self.colors['accent'])
+        header_label.pack(expand=True)
+        
+        # Loading label
+        loading_label = tk.Label(insights_window,
+                                text="🔄 Analyzing your financial data...",
+                                font=('Segoe UI', 14),
+                                fg=self.colors['dark'],
+                                bg=self.colors['light'])
+        loading_label.pack(expand=True)
+        
+        # Generate insights in background
+        def generate_insights():
+            try:
+                insights = self.financial_ai.analyze_spending_patterns(self.expenses)
+                
+                # Update UI with insights
+                insights_window.after(0, lambda: self.display_insights(insights_window, insights, loading_label))
+            except Exception as e:
+                insights_window.after(0, lambda: loading_label.config(text=f"Error generating insights: {str(e)}"))
+        
+        # Start analysis in background thread
+        threading.Thread(target=generate_insights, daemon=True).start()
+    
+    def display_insights(self, window, insights, loading_label):
+        """Display the AI insights in the window"""
+        # Remove loading label
+        loading_label.destroy()
+        
+        # Create scrollable text area
+        text_frame = tk.Frame(window, bg=self.colors['light'])
+        text_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Text widget with scrollbar
+        text_widget = tk.Text(text_frame,
+                             wrap=tk.WORD,
+                             font=('Segoe UI', 11),
+                             bg=self.colors['white'],
+                             fg=self.colors['dark'],
+                             padx=20,
+                             pady=20)
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        text_widget.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Format and display insights
+        formatted_text = self.format_insights_text(insights)
+        text_widget.insert(tk.END, formatted_text)
+        text_widget.config(state=tk.DISABLED)
+    
+    def format_insights_text(self, insights):
+        """Format insights for display"""
+        if insights.get('status') != 'success':
+            return f"Unable to generate insights: {insights.get('message', 'Unknown error')}"
+        
+        text = "🧠 AI FINANCIAL INSIGHTS REPORT\n"
+        text += "=" * 50 + "\n\n"
+        
+        # Analysis period
+        if 'data_period' in insights:
+            period = insights['data_period']
+            text += f"📊 Analysis Period: {period.get('start_date')} to {period.get('end_date')}\n"
+            text += f"📈 Total Transactions: {period.get('total_transactions', 0)}\n\n"
+        
+        # Spending summary
+        if 'spending_summary' in insights:
+            summary = insights['spending_summary']
+            text += "💰 SPENDING SUMMARY\n"
+            text += f"• Total Spending: ₹{summary.get('total_spending', 0):,.2f}\n"
+            text += f"• Daily Average: ₹{summary.get('average_daily', 0):,.2f}\n"
+            text += f"• Average Transaction: ₹{summary.get('average_transaction', 0):,.2f}\n"
+            text += f"• Largest Transaction: ₹{summary.get('largest_transaction', 0):,.2f}\n\n"
+        
+        # Financial health
+        if 'financial_health' in insights:
+            health = insights['financial_health']
+            score = health.get('overall_score', 0)
+            status = health.get('status', 'unknown')
+            text += f"🏥 FINANCIAL HEALTH SCORE: {score:.0f}/100 ({status.upper()})\n\n"
+        
+        # Recommendations
+        if 'recommendations' in insights and insights['recommendations']:
+            text += "💡 AI RECOMMENDATIONS\n"
+            for i, rec in enumerate(insights['recommendations'], 1):
+                priority = rec.get('priority', 'medium').upper()
+                text += f"{i}. [{priority}] {rec.get('title', 'Recommendation')}\n"
+                text += f"   {rec.get('message', 'No details available')}\n"
+                if 'action' in rec:
+                    text += f"   Action: {rec['action']}\n"
+                text += "\n"
+        
+        # Anomalies
+        if 'anomalies' in insights and insights['anomalies'].get('status') != 'insufficient_data':
+            anomalies = insights['anomalies']
+            text += "⚠️ SPENDING ANOMALIES\n"
+            if 'transaction_outliers' in anomalies:
+                outliers = anomalies['transaction_outliers']
+                text += f"• High-value transactions: {outliers.get('high_value_transactions', 0)}\n"
+                if 'largest_transaction' in outliers:
+                    largest = outliers['largest_transaction']
+                    text += f"• Largest: ₹{largest.get('amount', 0):,.2f} on {largest.get('date', 'unknown')}\n"
+            text += "\n"
+        
+        text += "Generated by AI Financial Intelligence Engine\n"
+        text += f"Report generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        
+        return text
+    
+    def show_categorization_settings(self):
+        """Show AI categorization settings and statistics"""
+        if not self.ai_categorizer:
+            messagebox.showinfo("Info", "AI categorization not available.")
+            return
+        
+        # Create settings window
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("🏷️ Smart Categorization Settings")
+        settings_window.geometry("600x500")
+        settings_window.configure(bg=self.colors['light'])
+        
+        # Header
+        header_frame = tk.Frame(settings_window, bg=self.colors['success'], height=60)
+        header_frame.pack(fill='x')
+        header_frame.pack_propagate(False)
+        
+        header_label = tk.Label(header_frame,
+                               text="🏷️ Smart Categorization Settings",
+                               font=('Segoe UI', 16, 'bold'),
+                               fg=self.colors['white'],
+                               bg=self.colors['success'])
+        header_label.pack(expand=True)
+        
+        # Content frame
+        content_frame = tk.Frame(settings_window, bg=self.colors['light'])
+        content_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Statistics
+        stats_text = tk.Text(content_frame,
+                            height=15,
+                            wrap=tk.WORD,
+                            font=('Segoe UI', 11),
+                            bg=self.colors['white'],
+                            padx=15,
+                            pady=15)
+        stats_text.pack(fill='both', expand=True)
+        
+        # Generate statistics
+        stats_info = "🏷️ SMART CATEGORIZATION STATUS\n"
+        stats_info += "=" * 40 + "\n\n"
+        stats_info += "✅ AI Categorization: ACTIVE\n"
+        stats_info += "📊 Learning Mode: Enabled\n"
+        stats_info += "🎯 Accuracy: Improving with each transaction\n\n"
+        stats_info += "FEATURES:\n"
+        stats_info += "• Machine Learning categorization\n"
+        stats_info += "• Keyword-based fallback system\n"
+        stats_info += "• User feedback learning\n"
+        stats_info += "• Continuous improvement\n\n"
+        stats_info += "HOW IT WORKS:\n"
+        stats_info += "1. AI analyzes expense description and amount\n"
+        stats_info += "2. Suggests most likely category\n"
+        stats_info += "3. Learns from your feedback\n"
+        stats_info += "4. Improves accuracy over time\n\n"
+        stats_info += "CATEGORIES AVAILABLE:\n"
+        categories = ["Food", "Transportation", "Entertainment", "Shopping", 
+                     "Bills", "Healthcare", "Education", "Other"]
+        for cat in categories:
+            stats_info += f"• {cat}\n"
+        
+        stats_text.insert(tk.END, stats_info)
+        stats_text.config(state=tk.DISABLED)
+        
+        # Control buttons
+        button_frame = tk.Frame(content_frame, bg=self.colors['light'])
+        button_frame.pack(fill='x', pady=(10, 0))
+        
+        retrain_btn = tk.Button(button_frame,
+                               text="🔄 Retrain AI Model",
+                               command=self.retrain_ai_model,
+                               bg=self.colors['success'],
+                               fg=self.colors['white'],
+                               font=('Segoe UI', 11, 'bold'),
+                               relief='flat',
+                               padx=20,
+                               pady=8)
+        retrain_btn.pack(side='left', padx=(0, 10))
+        
+        test_btn = tk.Button(button_frame,
+                            text="🧪 Test Categorization",
+                            command=self.test_categorization,
+                            bg=self.colors['info'],
+                            fg=self.colors['white'],
+                            font=('Segoe UI', 11, 'bold'),
+                            relief='flat',
+                            padx=20,
+                            pady=8)
+        test_btn.pack(side='left')
+    
+    def show_predictions(self):
+        """Show spending predictions"""
+        messagebox.showinfo("🔮 Predictions", "Spending predictions feature coming soon!\n\nThis will include:\n• Next week spending forecast\n• Monthly budget recommendations\n• Category-wise predictions\n• Budget alerts")
+    
+    def show_anomalies(self):
+        """Show anomaly detection results"""
+        messagebox.showinfo("⚠️ Anomalies", "Anomaly detection feature coming soon!\n\nThis will include:\n• Unusual spending alerts\n• Budget overrun warnings\n• Irregular pattern detection\n• Smart notifications")
+    
+    def generate_smart_report(self):
+        """Generate AI-powered smart report"""
+        messagebox.showinfo("📈 Smart Reports", "Smart reports feature coming soon!\n\nThis will include:\n• PDF financial reports\n• Excel export with insights\n• Trend analysis\n• Personalized recommendations")
+    
+    def retrain_ai_model(self):
+        """Retrain the AI categorization model"""
+        if not self.ai_categorizer:
+            return
+        
+        try:
+            # Train on existing data
+            training_data = [(exp['description'], exp['amount'], exp['category']) for exp in self.expenses]
+            
+            if training_data:
+                self.ai_categorizer.train_model(training_data)
+                messagebox.showinfo("✅ Success", f"AI model retrained with {len(training_data)} transactions!")
+            else:
+                messagebox.showinfo("ℹ️ Info", "No training data available. Add some expenses first.")
+        except Exception as e:
+            messagebox.showerror("❌ Error", f"Failed to retrain model: {str(e)}")
+    
+    def test_categorization(self):
+        """Test the AI categorization with user input"""
+        if not self.ai_categorizer:
+            return
+        
+        # Create test dialog
+        test_window = tk.Toplevel(self.root)
+        test_window.title("🧪 Test AI Categorization")
+        test_window.geometry("500x300")
+        test_window.configure(bg=self.colors['light'])
+        
+        # Input fields
+        tk.Label(test_window, text="Test Description:", 
+                font=('Segoe UI', 12, 'bold'),
+                bg=self.colors['light']).pack(pady=10)
+        
+        desc_entry = tk.Entry(test_window, font=('Segoe UI', 12), width=40)
+        desc_entry.pack(pady=5)
+        desc_entry.insert(0, "Coffee at Starbucks")
+        
+        tk.Label(test_window, text="Test Amount:", 
+                font=('Segoe UI', 12, 'bold'),
+                bg=self.colors['light']).pack(pady=(20, 10))
+        
+        amount_entry = tk.Entry(test_window, font=('Segoe UI', 12), width=20)
+        amount_entry.pack(pady=5)
+        amount_entry.insert(0, "250")
+        
+        # Result area
+        result_label = tk.Label(test_window, text="", 
+                               font=('Segoe UI', 12),
+                               bg=self.colors['light'],
+                               wraplength=450)
+        result_label.pack(pady=20)
+        
+        def run_test():
+            try:
+                description = desc_entry.get()
+                amount = float(amount_entry.get())
+                
+                predicted_category = self.ai_categorizer.smart_categorize(description, amount)
+                
+                result_text = f"🤖 AI Prediction: {predicted_category}\n\n"
+                result_text += f"Input: '{description}' - ₹{amount}"
+                
+                result_label.config(text=result_text, fg=self.colors['success'])
+            except Exception as e:
+                result_label.config(text=f"Error: {str(e)}", fg=self.colors['danger'])
+        
+        test_btn = tk.Button(test_window,
+                            text="🧪 Test Categorization",
+                            command=run_test,
+                            bg=self.colors['info'],
+                            fg=self.colors['white'],
+                            font=('Segoe UI', 12, 'bold'),
+                            relief='flat',
+                            padx=20,
+                            pady=8)
+        test_btn.pack(pady=10)
+    
+    def create_ai_suggestions_panel(self):
+        """Create a prominent AI suggestions panel in the main interface"""
+        # Create collapsible AI suggestions frame
+        self.ai_panel = tk.Frame(self.main_frame, bg=self.colors['primary'], relief='raised', bd=2)
+        self.ai_panel.pack(fill='x', padx=10, pady=(10, 5))
+        
+        # Header with toggle button
+        header_frame = tk.Frame(self.ai_panel, bg=self.colors['primary'])
+        header_frame.pack(fill='x', padx=10, pady=5)
+        
+        # AI icon and title
+        title_frame = tk.Frame(header_frame, bg=self.colors['primary'])
+        title_frame.pack(side='left', fill='x', expand=True)
+        
+        self.ai_title = tk.Label(title_frame, 
+                                text="🤖 AI Financial Assistant",
+                                font=('Segoe UI', 12, 'bold'),
+                                fg=self.colors['white'],
+                                bg=self.colors['primary'])
+        self.ai_title.pack(side='left')
+        
+        # Live indicator
+        self.ai_status = tk.Label(title_frame,
+                                 text="🟢 LIVE",
+                                 font=('Segoe UI', 9, 'bold'),
+                                 fg='#00ff00',
+                                 bg=self.colors['primary'])
+        self.ai_status.pack(side='left', padx=(10, 0))
+        
+        # Toggle button
+        self.ai_expanded = tk.BooleanVar(value=True)
+        self.toggle_btn = tk.Button(header_frame,
+                                   text="▼",
+                                   command=self.toggle_ai_panel,
+                                   bg=self.colors['secondary'],
+                                   fg=self.colors['white'],
+                                   font=('Segoe UI', 10, 'bold'),
+                                   width=3,
+                                   relief='flat')
+        self.toggle_btn.pack(side='right')
+        
+        # Content frame (collapsible)
+        self.ai_content = tk.Frame(self.ai_panel, bg=self.colors['white'])
+        self.ai_content.pack(fill='x', padx=10, pady=(0, 10))
+        
+        # Create suggestion cards container
+        self.suggestions_container = tk.Frame(self.ai_content, bg=self.colors['white'])
+        self.suggestions_container.pack(fill='x', pady=10)
+        
+        # Quick stats row
+        self.quick_stats_frame = tk.Frame(self.ai_content, bg=self.colors['white'])
+        self.quick_stats_frame.pack(fill='x', pady=(0, 10))
+        
+        # Initialize with loading state
+        self.update_ai_suggestions()
+        
+        # Auto-refresh suggestions every 30 seconds
+        self.schedule_ai_updates()
+    
+    def toggle_ai_panel(self):
+        """Toggle the AI panel visibility"""
+        if self.ai_expanded.get():
+            self.ai_content.pack_forget()
+            self.toggle_btn.config(text="▶")
+            self.ai_expanded.set(False)
+        else:
+            self.ai_content.pack(fill='x', padx=10, pady=(0, 10))
+            self.toggle_btn.config(text="▼")
+            self.ai_expanded.set(True)
+    
+    def update_ai_suggestions(self):
+        """Update the AI suggestions panel with live recommendations"""
+        if not AI_FEATURES_AVAILABLE or not hasattr(self, 'suggestions_container'):
+            return
+        
+        # Clear existing suggestions
+        for widget in self.suggestions_container.winfo_children():
+            widget.destroy()
+        
+        for widget in self.quick_stats_frame.winfo_children():
+            widget.destroy()
+        
+        try:
+            # Show loading state
+            loading_label = tk.Label(self.suggestions_container,
+                                   text="🔄 Analyzing your spending...",
+                                   font=('Segoe UI', 10),
+                                   fg=self.colors['info'],
+                                   bg=self.colors['white'])
+            loading_label.pack(pady=10)
+            
+            # Generate suggestions in background
+            def generate_live_suggestions():
+                try:
+                    if not self.expenses:
+                        suggestions = self.get_welcome_suggestions()
+                    else:
+                        # Get AI insights
+                        insights = self.financial_ai.analyze_spending_patterns(self.expenses)
+                        suggestions = self.extract_actionable_suggestions(insights)
+                    
+                    # Update UI on main thread
+                    self.root.after(0, lambda: self.display_live_suggestions(suggestions))
+                except Exception as e:
+                    self.root.after(0, lambda: self.display_suggestion_error(str(e)))
+            
+            # Start analysis in background
+            threading.Thread(target=generate_live_suggestions, daemon=True).start()
+            
+        except Exception as e:
+            self.display_suggestion_error(str(e))
+    
+    def get_welcome_suggestions(self):
+        """Get welcome suggestions for new users"""
+        return [
+            {
+                'type': 'welcome',
+                'title': '👋 Welcome to AI-Powered Expense Tracking!',
+                'message': 'Start by adding a few expenses to unlock personalized insights.',
+                'action': 'Add your first expense',
+                'priority': 'info',
+                'icon': '🚀'
+            },
+            {
+                'type': 'tip',
+                'title': '💡 Smart Categorization Ready',
+                'message': 'AI will automatically suggest categories for your expenses.',
+                'action': 'Learn more',
+                'priority': 'info',
+                'icon': '🏷️'
+            }
+        ]
+    
+    def extract_actionable_suggestions(self, insights):
+        """Extract actionable suggestions from AI insights"""
+        suggestions = []
+        
+        if insights.get('status') != 'success':
+            return [{
+                'type': 'error',
+                'title': '⚠️ Analysis Unavailable',
+                'message': 'Unable to generate insights. Please check your data.',
+                'priority': 'warning',
+                'icon': '⚠️'
+            }]
+        
+        # Add financial health score as first suggestion
+        if 'financial_health' in insights:
+            health = insights['financial_health']
+            score = health.get('overall_score', 0)
+            status = health.get('status', 'unknown')
+            
+            if score >= 80:
+                icon = '🟢'
+                priority = 'success'
+                title = f'Excellent Financial Health! ({score:.0f}/100)'
+            elif score >= 60:
+                icon = '🟡'
+                priority = 'warning'
+                title = f'Good Financial Health ({score:.0f}/100)'
+            else:
+                icon = '🔴'
+                priority = 'danger'
+                title = f'Financial Health Needs Attention ({score:.0f}/100)'
+            
+            suggestions.append({
+                'type': 'health',
+                'title': title,
+                'message': f'Your spending pattern is {status}. Click to see improvement tips.',
+                'action': 'View Details',
+                'priority': priority,
+                'icon': icon
+            })
+        
+        # Add top recommendations
+        if 'recommendations' in insights and insights['recommendations']:
+            for rec in insights['recommendations'][:2]:  # Show top 2 recommendations
+                priority_map = {'high': 'danger', 'medium': 'warning', 'low': 'info'}
+                icon_map = {'high': '🚨', 'medium': '💡', 'low': 'ℹ️'}
+                
+                rec_priority = rec.get('priority', 'medium').lower()
+                suggestions.append({
+                    'type': 'recommendation',
+                    'title': rec.get('title', 'AI Recommendation'),
+                    'message': rec.get('message', 'No details available'),
+                    'action': rec.get('action', 'Learn More'),
+                    'priority': priority_map.get(rec_priority, 'info'),
+                    'icon': icon_map.get(rec_priority, '💡')
+                })
+        
+        # Add spending anomaly alert
+        if 'anomalies' in insights and insights['anomalies'].get('status') != 'insufficient_data':
+            anomalies = insights['anomalies']
+            if 'transaction_outliers' in anomalies:
+                outliers = anomalies['transaction_outliers']
+                high_value = outliers.get('high_value_transactions', 0)
+                if high_value > 0:
+                    suggestions.append({
+                        'type': 'anomaly',
+                        'title': f'🔍 {high_value} Unusual Transaction(s) Detected',
+                        'message': 'Some expenses seem higher than usual. Review them for accuracy.',
+                        'action': 'Review Transactions',
+                        'priority': 'warning',
+                        'icon': '⚠️'
+                    })
+        
+        # Add spending trend alert
+        if 'spending_trends' in insights:
+            trends = insights['spending_trends']
+            if 'daily_trend' in trends:
+                trend = trends['daily_trend'].get('trend_direction', 'stable')
+                if trend == 'increasing':
+                    suggestions.append({
+                        'type': 'trend',
+                        'title': '📈 Spending Trend: Increasing',
+                        'message': 'Your daily spending has been increasing. Consider reviewing your budget.',
+                        'action': 'View Trends',
+                        'priority': 'warning',
+                        'icon': '📈'
+                    })
+        
+        return suggestions
+    
+    def display_live_suggestions(self, suggestions):
+        """Display the live suggestions in the panel"""
+        # Clear loading state
+        for widget in self.suggestions_container.winfo_children():
+            widget.destroy()
+        
+        if not suggestions:
+            no_suggestions = tk.Label(self.suggestions_container,
+                                     text="✅ All good! No urgent suggestions at the moment.",
+                                     font=('Segoe UI', 10),
+                                     fg=self.colors['success'],
+                                     bg=self.colors['white'])
+            no_suggestions.pack(pady=10)
+            return
+        
+        # Display each suggestion as a card
+        for i, suggestion in enumerate(suggestions):
+            self.create_suggestion_card(self.suggestions_container, suggestion, i)
+        
+        # Add quick stats
+        self.display_quick_stats()
+    
+    def create_suggestion_card(self, parent, suggestion, index):
+        """Create a suggestion card widget"""
+        # Color mapping for priorities
+        color_map = {
+            'danger': '#e74c3c',
+            'warning': '#f39c12',
+            'success': '#27ae60',
+            'info': '#3498db'
+        }
+        
+        bg_color_map = {
+            'danger': '#fdf2f2',
+            'warning': '#fef9e7',
+            'success': '#f0f9f4',
+            'info': '#eff8ff'
+        }
+        
+        priority = suggestion.get('priority', 'info')
+        accent_color = color_map.get(priority, '#3498db')
+        bg_color = bg_color_map.get(priority, '#eff8ff')
+        
+        # Card frame
+        card_frame = tk.Frame(parent, bg=bg_color, relief='solid', bd=1)
+        card_frame.pack(fill='x', padx=5, pady=2)
+        
+        # Left accent bar
+        accent_bar = tk.Frame(card_frame, bg=accent_color, width=4)
+        accent_bar.pack(side='left', fill='y')
+        
+        # Content frame
+        content_frame = tk.Frame(card_frame, bg=bg_color)
+        content_frame.pack(side='left', fill='both', expand=True, padx=10, pady=8)
+        
+        # Title with icon
+        title_frame = tk.Frame(content_frame, bg=bg_color)
+        title_frame.pack(fill='x')
+        
+        title_label = tk.Label(title_frame,
+                              text=f"{suggestion.get('icon', '💡')} {suggestion.get('title', 'Suggestion')}",
+                              font=('Segoe UI', 10, 'bold'),
+                              fg=accent_color,
+                              bg=bg_color,
+                              anchor='w')
+        title_label.pack(side='left', fill='x', expand=True)
+        
+        # Message
+        message_label = tk.Label(content_frame,
+                                text=suggestion.get('message', ''),
+                                font=('Segoe UI', 9),
+                                fg=self.colors['dark'],
+                                bg=bg_color,
+                                anchor='w',
+                                wraplength=400)
+        message_label.pack(fill='x', pady=(2, 0))
+        
+        # Action button (if applicable)
+        action = suggestion.get('action')
+        if action and action not in ['Learn More', 'Learn more']:
+            action_btn = tk.Button(content_frame,
+                                  text=f"→ {action}",
+                                  command=lambda: self.handle_suggestion_action(suggestion),
+                                  bg=accent_color,
+                                  fg='white',
+                                  font=('Segoe UI', 8, 'bold'),
+                                  relief='flat',
+                                  padx=10)
+            action_btn.pack(anchor='w', pady=(5, 0))
+    
+    def handle_suggestion_action(self, suggestion):
+        """Handle suggestion action clicks"""
+        suggestion_type = suggestion.get('type', '')
+        
+        if suggestion_type == 'health':
+            self.show_ai_insights()
+        elif suggestion_type == 'recommendation':
+            self.show_ai_insights()
+        elif suggestion_type == 'anomaly':
+            # Filter transactions to show only high-value ones
+            self.filter_high_value_transactions()
+        elif suggestion_type == 'trend':
+            self.open_dashboard()
+        else:
+            # Default action - show insights
+            self.show_ai_insights()
+    
+    def filter_high_value_transactions(self):
+        """Filter and highlight high-value transactions"""
+        if not self.expenses:
+            return
+        
+        # Calculate average transaction amount
+        amounts = [float(expense['amount']) for expense in self.expenses]
+        avg_amount = statistics.mean(amounts)
+        threshold = avg_amount * 2  # Transactions 2x above average
+        
+        # Filter tree view to show only high-value transactions
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        high_value_count = 0
+        for expense in self.expenses:
+            if float(expense['amount']) > threshold:
+                amount_color = 'red' if float(expense['amount']) > threshold * 1.5 else 'orange'
+                item = self.tree.insert('', 'end', values=(
+                    expense['date'],
+                    expense['category'],
+                    expense['description'],
+                    f"₹{float(expense['amount']):.2f}"
+                ))
+                # Highlight high-value transactions
+                self.tree.set(item, 'amount', f"⚠️ ₹{float(expense['amount']):.2f}")
+                high_value_count += 1
+        
+        # Show message about filtering
+        messagebox.showinfo("High-Value Transactions", 
+                           f"Showing {high_value_count} transactions above ₹{threshold:.0f}\n\n"
+                           f"Click 'Refresh' to show all transactions again.")
+    
+    def display_quick_stats(self):
+        """Display quick financial stats"""
+        if not self.expenses:
+            return
+        
+        try:
+            # Calculate quick stats
+            total_spending = sum(float(expense['amount']) for expense in self.expenses)
+            transaction_count = len(self.expenses)
+            avg_transaction = total_spending / transaction_count if transaction_count > 0 else 0
+            
+            # This month's spending
+            current_month = datetime.now().replace(day=1)
+            this_month_expenses = [
+                expense for expense in self.expenses 
+                if datetime.strptime(expense['date'], '%Y-%m-%d') >= current_month
+            ]
+            this_month_total = sum(float(expense['amount']) for expense in this_month_expenses)
+            
+            # Create stats cards
+            stats_data = [
+                ('💰', 'Total Spent', f'₹{total_spending:,.0f}'),
+                ('📊', 'This Month', f'₹{this_month_total:,.0f}'),
+                ('🧮', 'Avg Transaction', f'₹{avg_transaction:,.0f}'),
+                ('📈', 'Total Transactions', f'{transaction_count}')
+            ]
+            
+            for icon, label, value in stats_data:
+                stat_frame = tk.Frame(self.quick_stats_frame, bg='#f8f9fa', relief='solid', bd=1)
+                stat_frame.pack(side='left', fill='both', expand=True, padx=2, pady=2)
+                
+                # Icon
+                icon_label = tk.Label(stat_frame, text=icon, font=('Segoe UI', 16), 
+                                     bg='#f8f9fa', fg=self.colors['primary'])
+                icon_label.pack(pady=(5, 0))
+                
+                # Value
+                value_label = tk.Label(stat_frame, text=value, font=('Segoe UI', 10, 'bold'),
+                                      bg='#f8f9fa', fg=self.colors['dark'])
+                value_label.pack()
+                
+                # Label
+                label_label = tk.Label(stat_frame, text=label, font=('Segoe UI', 8),
+                                      bg='#f8f9fa', fg='gray')
+                label_label.pack(pady=(0, 5))
+        
+        except Exception as e:
+            print(f"Error displaying quick stats: {e}")
+    
+    def display_suggestion_error(self, error_msg):
+        """Display error in suggestions panel"""
+        for widget in self.suggestions_container.winfo_children():
+            widget.destroy()
+        
+        error_label = tk.Label(self.suggestions_container,
+                              text=f"⚠️ Unable to generate suggestions: {error_msg}",
+                              font=('Segoe UI', 10),
+                              fg=self.colors['danger'],
+                              bg=self.colors['white'])
+        error_label.pack(pady=10)
+    
+    def schedule_ai_updates(self):
+        """Schedule periodic AI suggestion updates"""
+        # Update suggestions every 30 seconds
+        self.root.after(30000, self.auto_update_suggestions)
+    
+    def auto_update_suggestions(self):
+        """Auto-update suggestions periodically"""
+        if hasattr(self, 'ai_panel') and self.ai_panel.winfo_exists():
+            self.update_ai_suggestions()
+            self.schedule_ai_updates()  # Schedule next update
+    
+    def show_urgent_ai_notification(self, suggestion):
+        """Show urgent AI notifications as popup banners"""
+        if suggestion.get('priority') not in ['danger', 'warning']:
+            return
+        
+        # Create notification banner
+        banner = tk.Toplevel(self.root)
+        banner.title("🚨 AI Alert")
+        banner.geometry("400x150")
+        banner.resizable(False, False)
+        banner.configure(bg=self.colors['danger'])
+        
+        # Position in top-right corner
+        banner.geometry("+{}+{}".format(
+            self.root.winfo_x() + self.root.winfo_width() - 420,
+            self.root.winfo_y() + 50
+        ))
+        
+        # Make it stay on top
+        banner.attributes('-topmost', True)
+        
+        # Content
+        content_frame = tk.Frame(banner, bg=self.colors['danger'])
+        content_frame.pack(fill='both', expand=True, padx=15, pady=15)
+        
+        # Title
+        title_label = tk.Label(content_frame,
+                              text=f"{suggestion.get('icon', '🚨')} {suggestion.get('title', 'AI Alert')}",
+                              font=('Segoe UI', 12, 'bold'),
+                              fg='white',
+                              bg=self.colors['danger'])
+        title_label.pack(anchor='w')
+        
+        # Message
+        message_label = tk.Label(content_frame,
+                                text=suggestion.get('message', ''),
+                                font=('Segoe UI', 10),
+                                fg='white',
+                                bg=self.colors['danger'],
+                                wraplength=350,
+                                justify='left')
+        message_label.pack(anchor='w', pady=(5, 10))
+        
+        # Buttons
+        btn_frame = tk.Frame(content_frame, bg=self.colors['danger'])
+        btn_frame.pack(fill='x')
+        
+        action_btn = tk.Button(btn_frame,
+                              text=suggestion.get('action', 'View Details'),
+                              command=lambda: [self.handle_suggestion_action(suggestion), banner.destroy()],
+                              bg='white',
+                              fg=self.colors['danger'],
+                              font=('Segoe UI', 9, 'bold'),
+                              relief='flat',
+                              padx=15)
+        action_btn.pack(side='left')
+        
+        dismiss_btn = tk.Button(btn_frame,
+                               text="Dismiss",
+                               command=banner.destroy,
+                               bg=self.colors['white'],
+                               fg=self.colors['dark'],
+                               font=('Segoe UI', 9),
+                               relief='flat',
+                               padx=15)
+        dismiss_btn.pack(side='right')
+        
+        # Auto-dismiss after 10 seconds
+        banner.after(10000, banner.destroy)
+    
+    def check_for_urgent_alerts(self):
+        """Check for urgent AI alerts and show notifications"""
+        if not AI_FEATURES_AVAILABLE or not self.expenses:
+            return
+        
+        try:
+            # Quick analysis for urgent alerts
+            insights = self.financial_ai.analyze_spending_patterns(self.expenses)
+            suggestions = self.extract_actionable_suggestions(insights)
+            
+            for suggestion in suggestions:
+                if suggestion.get('priority') == 'danger':
+                    self.show_urgent_ai_notification(suggestion)
+                    break  # Show only one urgent notification at a time
+                    
+        except Exception as e:
+            print(f"Error checking urgent alerts: {e}")
